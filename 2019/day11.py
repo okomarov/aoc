@@ -14,7 +14,7 @@ with open('data/day11.txt') as f:
 # After the robot turns, move forward 1.
 # The robot starts facing up.
 
-DR = [1, 0, -1, 0]
+DR = [-1, 0, 1, 0]
 DC = [0, 1, 0, -1]
 
 def run_painting_bot(initial_input):
@@ -50,15 +50,32 @@ print('Part 1: ', len(run_painting_bot(0)))
 # =================================
 # After starting the robot on a single white panel instead,
 # what registration identifier does it paint on your hull?
-
-import matplotlib.pyplot as plt
 board = run_painting_bot(1)
-x = []
-y = []
+
+rows = []
+minx = min(board, key=lambda rc: rc[1])[1]
+maxx = max(board, key=lambda rc: rc[1])[1]
+miny = min(board, key=lambda rc: rc[0])[0]
+maxy = max(board, key=lambda rc: rc[0])[0]
+R = maxy-miny+1
+C = maxx-minx+1
+new_board = [[' ']*C for _ in range(R)]
+
 for k, v in board.items():
     if v == 1:
-        x.append(k[1])
-        y.append(k[0])
-plt.scatter(x, y)
-plt.axes().set_aspect('equal')
-plt.show()
+        new_board[k[0]-miny][k[1]-minx] = '#'
+print('Part 2:')
+for r in range(R):
+    print(''.join(new_board[r]))
+
+# # Or with matplotlib
+# import matplotlib.pyplot as plt
+# x = []
+# y = []
+# for k, v in board.items():
+#     if v == 1:
+#         x.append(k[1])
+#         y.append(k[0])
+# plt.scatter(x, y)
+# plt.axes().set_aspect('equal')
+# plt.show()
