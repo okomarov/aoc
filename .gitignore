@@ -1,1 +1,8 @@
-2018
+# Rust
+target/
+
+# IDE
+.vscode
+
+# Data
+input*.txt
