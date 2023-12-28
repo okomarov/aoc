@@ -1,6 +1,6 @@
 use std::{
   cmp::max,
-  collections::{HashMap, HashSet},
+  collections::{HashMap, HashSet, VecDeque},
 };
 
 fn main() {
@@ -79,6 +79,7 @@ fn settle_bricks2(bricks: &mut Vec<R>) {
       }
     }
   }
+  bricks.sort_by_key(|k| k.z1);
 }
 
 fn part1(input: &str) -> usize {
@@ -87,29 +88,66 @@ fn part1(input: &str) -> usize {
 
   // bricks.iter().for_each(|b| println!("{:?}", b));
 
-  let mut brick_map: HashMap<usize, Vec<usize>> = HashMap::new();
+  let mut supported: HashMap<usize, Vec<usize>> = HashMap::new();
   for current in 0..bricks.len() {
-    for other in 0..bricks.len() {
-      if bricks[other].z2 == (bricks[current].z1 - 1) && intersect(&bricks[current], &bricks[other])
+    for supported_by in 0..bricks.len() {
+      if bricks[supported_by].z2 == (bricks[current].z1 - 1)
+        && intersect(&bricks[current], &bricks[supported_by])
       {
-        brick_map
+        supported
           .entry(bricks[current].name)
-          .and_modify(|names| names.push(bricks[other].name))
-          .or_insert(vec![bricks[other].name]);
+          .and_modify(|names| names.push(bricks[supported_by].name))
+          .or_insert(vec![bricks[supported_by].name]);
       }
     }
   }
 
-  let single_support: HashSet<usize> = brick_map
+  let single_support: HashSet<usize> = supported
     .values()
     .filter_map(|v| if v.len() == 1 { Some(v) } else { None })
     .flatten()
     .copied()
     .collect();
 
-  HashSet::from((1..=bricks.len()).collect::<HashSet<usize>>())
-    .difference(&single_support)
-    .count()
+  let mut supports: HashMap<usize, Vec<usize>> = HashMap::new();
+  for base in 0..bricks.len() {
+    for other in 0..bricks.len() {
+      if bricks[base].z2 == bricks[other].z1 - 1 && intersect(&bricks[base], &bricks[other]) {
+        supports
+          .entry(bricks[base].name)
+          .and_modify(|names| names.push(bricks[other].name))
+          .or_insert(vec![bricks[other].name]);
+      }
+    }
+  }
+
+  let mut ans = 0;
+  for single in single_support.iter() {
+    let start = supports.get(&single).unwrap();
+    let mut removed: HashSet<usize> = HashSet::from([*single]);
+    let mut queue: VecDeque<usize> = start.iter().cloned().collect();
+
+    while let Some(brick) = queue.pop_front() {
+      if !supported.contains_key(&brick) || removed.contains(&brick) {
+        continue;
+      }
+
+      if supported
+        .get(&brick)
+        .unwrap()
+        .iter()
+        .all(|supported_by| removed.contains(supported_by))
+      {
+        ans += 1;
+        removed.insert(brick);
+        if supports.contains_key(&brick) {
+          queue.extend(supports.get(&brick).unwrap());
+        }
+      }
+    }
+  }
+
+  ans
 }
 
 #[cfg(test)]
