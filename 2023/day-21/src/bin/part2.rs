@@ -9,18 +9,17 @@ fn main() {
   dbg!(output1);
 }
 
-fn hash_hashset<T: Hash + Eq>(hash_set: &HashSet<T>) -> u64 {
+fn hash_set(set: &HashSet<(i32, i32)>) -> u64 {
+  let mut tuples: Vec<_> = set.iter().collect();
+  tuples.sort_unstable(); // Sort the tuples
+
   let mut hasher = DefaultHasher::new();
-  let mut elems: Vec<u64> = Vec::new();
-
-  for elem in hash_set {
+  for tuple in tuples {
     let mut elem_hasher = DefaultHasher::new();
-    elem.hash(&mut elem_hasher);
-    elems.push(elem_hasher.finish());
-  }
+    tuple.hash(&mut elem_hasher);
+    let elem_hash = elem_hasher.finish();
 
-  // Combine the hashes in a commutative way
-  for elem_hash in elems {
+    // Combine the hashes in a deterministic way
     hasher.write_u64(elem_hash);
   }
 
@@ -82,13 +81,13 @@ fn part1(input: &str) -> usize {
 
   let mut history: HashMap<u64, HashSet<(i32, i32)>> = HashMap::new();
 
-  for i in 0..500 {
+  for i in 1..=1000 {
     let mut outer: HashMap<(i32, i32), HashSet<(i32, i32)>> = HashMap::new();
-    println!("{i}");
-    // println!("{:?}", now);
+
     for ((board_row, board_col), now) in now_all.iter_mut() {
       let mut temp: HashSet<(i32, i32)> = HashSet::new();
-      if let Some(existing) = history.get(&hash_hashset(&now)) {
+      let now_hash = hash_set(&now);
+      if let Some(existing) = history.get(&now_hash) {
         temp = existing.clone();
       } else {
         for (row, col) in now.iter() {
@@ -97,10 +96,8 @@ fn part1(input: &str) -> usize {
 
             // Store outer position
             if new_r < 0 || new_r >= len || new_c < 0 || new_c >= len {
-              // println!("({new_r} {new_c})");
               temp.insert((new_r, new_c));
             } else {
-              // println!("({new_r} {new_c})");
               let val = board
                 .get(new_r as usize)
                 .and_then(|line| line.get(new_c as usize))
@@ -112,7 +109,7 @@ fn part1(input: &str) -> usize {
             }
           }
         }
-        history.insert(hash_hashset(&temp), temp.clone());
+        history.insert(now_hash, temp.clone());
       }
 
       // Outer
@@ -130,11 +127,34 @@ fn part1(input: &str) -> usize {
     for (key, value) in outer.iter() {
       now_all
         .entry(*key)
-        .or_insert_with(HashSet::new)
-        .extend(value);
+        .and_modify(|s| s.extend(value))
+        .or_insert_with(|| {
+          println!("{i} {:?}", key);
+          // print_board(&board, Some(value));
+          return value.clone();
+        });
     }
+    // println!(
+    //   "{i} {:?}",
+    //   now_all.values().map(|now| now.len()).sum::<usize>()
+    // );
   }
+
   now_all.values().map(|now| now.len()).sum()
+}
+
+fn print_board(board: &Vec<Vec<char>>, filled: Option<&HashSet<(i32, i32)>>) {
+  board.iter().enumerate().for_each(|(row, line)| {
+    line.iter().enumerate().for_each(|(col, &c)| {
+      if filled.map_or(false, |d| d.contains(&(row as i32, col as i32))) {
+        print!("O");
+      } else {
+        print!("{c}");
+      }
+    });
+    println!();
+  });
+  println!();
 }
 
 #[cfg(test)]
